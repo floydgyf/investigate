@@ -4,6 +4,6 @@ __pycache__/
 *$py.class
 
 # data files
-data/*
-/files/*
-
+*/data/*
+*/files/*
+/data/*
