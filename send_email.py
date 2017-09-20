@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#发送带附件邮件
+import win32com.client as win32 
 from email.mime.text import MIMEText
+from email.mime.image import MIMEImage 
 from email.mime.multipart import MIMEMultipart
 import smtplib
-import time
 import xlrd
 
 def addimg(src,imgid):  
@@ -12,7 +12,6 @@ def addimg(src,imgid):
     fp.close()  
     msgImage.add_header('Content-ID', imgid)  
     return msgImage  
-
 
 def send_email(to_list, att_list):    
 
@@ -56,16 +55,62 @@ def send_email(to_list, att_list):
     print '发送成功'
     
 
-xlwb = xlrd.open_workbook(u'mail_config.xlsx')
+def send_email_outlook(to_list,att_list):
+    #创建一个邮件实例
+    outlook = win32.Dispatch('outlook.application') 
+    mail = outlook.CreateItem(0)
+    msg = MIMEMultipart()
 
-ws = xlwb.sheets()[0]
+    #加邮件头 
+    mail.Subject = u"Investigate订阅推送-" + time.strftime("%Y%m%d")  
+    str = ''
+    for address in to_list:
+        str = str + address + ';'
+    mail.BCC = str
+
+    #邮件内容
+    mail.Body = u'''Investigate 订阅推送
+    
+        详细内容见附件。
+    '''
+    
+    #构造附件
+    for i in range(len(att_list)):
+        mail.Attachments.Add(att_list[i])
+            
+    #发送邮件
+    mail.Send()
+    print '发送成功'
+    
+    
+#发送邮件
+import socket
+import os
+import time
+
+path = os.path.dirname(os.path.realpath(__file__))
+hostname = socket.gethostname()
+if hostname == "SZE7270-1715":
+    xlwb = xlrd.open_workbook(path + u'\\mail_config.xlsx')
+else:
+    xlwb = xlrd.open_workbook(path + u'\\mail_config_home.xlsx')
+
 to_list = []
+ws = xlwb.sheets()[0]
 for i in range(1,ws.nrows):
     to_list.append(ws.cell(i,0).value.encode('utf-8'))
 
-ws = xlwb.sheets()[1]
 att_list = []
-for i in range(1,ws.nrows):
-    att_list.append('D:\\Investigate\\files\\' + ws.cell(i,3).value.encode('utf-8'))
+intraday = time.localtime(time.time())
+if intraday.tm_wday == 0:
+    ws = xlwb.sheets()[2]  #周度
+elif intraday.tm_mday == 1:
+    ws = xlwb.sheets()[3]  #月度
+else:
+    ws = xlwb.sheets()[1]  #日度
 
-send_email(to_list,att_list)
+for i in range(1,ws.nrows):
+    att_list.append(path + ws.cell(i,1).value.encode('utf-8') + ws.cell(i,0).value.encode('utf-8'))
+
+send_email_outlook(to_list,att_list)
+ 
