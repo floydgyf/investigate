@@ -13,31 +13,30 @@ intraday = time.strftime("%Y%m%d")
 path = os.path.dirname(os.path.realpath(__file__))
 f = open(path + "\\files\\Daily_Report.html",'w')
 html_str = '''<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-<font size="5" face = "Microsoft YaHei"><b> 市场行情日报 </b></font> 
+<font size="5" face = "Microsoft YaHei"><b> 市场行情周报 </b></font> 
 <br><font face = "Microsoft YaHei">    截止日期：''' + intraday + '</font><br>'
 f.write(html_str)
 
 
 w.start()
-################权益市场
+######################################权益市场################################
 
 #主要指数近期收益率：当日、近5交易日、近21个交易日
 sec_list = ['000001.SH','399001.SZ','399005.SZ','399006.SZ','HSI.HI','000903.SH','000300.SH','000905.SH','000852.SH']
 index = w.wss(sec_list, "sec_name").Data[0]
-columns = [u'今日收益率',u'近5日收益率',u'近1月收益率']
+columns = [u'近5日收益率',u'近1月收益率',u'今年以来收益率']
 
 data=[]
-begindate = intraday
-data.append(w.wss(sec_list, "pct_chg_per","startDate=" + begindate + ";endDate=" + intraday).Data[0])
-
 begindate = w.tdaysoffset(-5, intraday, "").Data[0][0].strftime("%Y%m%d")
 data.append(w.wss(sec_list, "pct_chg_per","startDate=" + begindate + ";endDate=" + intraday).Data[0])
 
 begindate = w.tdaysoffset(-21, intraday, "").Data[0][0].strftime("%Y%m%d")
 data.append(w.wss(sec_list, "pct_chg_per","startDate=" + begindate + ";endDate=" + intraday).Data[0])
 
-df = pd.DataFrame(data, columns = index, index =columns).T
+begindate = intraday[0:4]+'0101'
+data.append(w.wss(sec_list, "pct_chg_per","startDate=" + begindate + ";endDate=" + intraday).Data[0])
 
+df = pd.DataFrame(data, columns = index, index =columns).T
 draw_barh(df,u'主要指数收益率',f)
 
 #申万行业收益率
@@ -45,29 +44,28 @@ sec_list = w.wset("sectorconstituent","date="+ intraday +";sectorid=a39901011g00
 index = w.wss(sec_list, "sec_name").Data[0]
 for i in range(len(index)):
     index[i] = index[i].split("(")[0]
-columns = [u'今日收益率',u'近5日收益率',u'近1月收益率']
+columns = [u'近5日收益率',u'近1月收益率',u'今年以来收益率']
 
 data=[]
-begindate = intraday
-data.append(w.wss(sec_list, "pct_chg_per","startDate=" + begindate + ";endDate=" + intraday).Data[0])
-
 begindate = w.tdaysoffset(-5, intraday, "").Data[0][0].strftime("%Y%m%d")
 data.append(w.wss(sec_list, "pct_chg_per","startDate=" + begindate + ";endDate=" + intraday).Data[0])
 
 begindate = w.tdaysoffset(-21, intraday, "").Data[0][0].strftime("%Y%m%d")
 data.append(w.wss(sec_list, "pct_chg_per","startDate=" + begindate + ";endDate=" + intraday).Data[0])
 
-df = pd.DataFrame(data, columns = index, index =columns).T
+begindate = intraday[0:4]+'0101'
+data.append(w.wss(sec_list, "pct_chg_per","startDate=" + begindate + ";endDate=" + intraday).Data[0])
 
+df = pd.DataFrame(data, columns = index, index =columns).T
 draw_barh(df,u'申万行业收益率',f)
 
 
 ###########################固收市场#############################################
 
 #国债利率曲线变动
-sec_list = ['M1000155','M1000156','M1000158','M1000159','M1000160','M1000162','M1000164','M1000166','M1000167','M1000168','M1000169']
+sec_list = ['M1004677','M1000155','M1000156','M1000158','M1000159','M1000160','M1000162','M1000164','M1000166','M1000167','M1000168','M1000169']
 #关键点利率 0.25,0.5,1,2,3,5,7,10,15,20,30
-index = ['0.25Y','0.5Y','1Y','2Y','3Y','5Y','7Y','10Y','15Y','20Y','30Y']
+index = ['1M','0.25Y','0.5Y','1Y','2Y','3Y','5Y','7Y','10Y','15Y','20Y','30Y']
 begindate = w.tdaysoffset(-21, intraday, "").Data[0][0].strftime("%Y%m%d")
 windout = w.edb(sec_list, begindate, intraday)
 df = pd.DataFrame(windout.Data, columns = windout.Times, index =index)
@@ -78,9 +76,9 @@ interest_curve(u'中债国债收益率曲线变动',df,f)
 
 
 #国开债利率曲线变动
-sec_list = ['M1004260','M1004261','M1004263','M1004264','M1004265','M1004267','M1004269','M1004271','M1004272','M1004273','M1004274']
+sec_list = ['M1004687','M1004260','M1004261','M1004263','M1004264','M1004265','M1004267','M1004269','M1004271','M1004272','M1004273','M1004274']
 #关键点利率 0.25,0.5,1,2,3,5,7,10,15,20,30
-index = ['0.25Y','0.5Y','1Y','2Y','3Y','5Y','7Y','10Y','15Y','20Y','30Y']
+index = ['1M','0.25Y','0.5Y','1Y','2Y','3Y','5Y','7Y','10Y','15Y','20Y','30Y']
 begindate = w.tdaysoffset(-21, intraday, "").Data[0][0].strftime("%Y%m%d")
 windout = w.edb(sec_list, begindate, intraday)
 df = pd.DataFrame(windout.Data, columns = windout.Times, index =index)
@@ -92,9 +90,9 @@ interest_curve(u'中债国开债收益率曲线变动',df,f)
 
 
 #信用债利率曲线变动
-sec_list = ['M1004554','M1000393','M1000394','M1000395','M1000396','M1000398','M1000400','M1000402','M1000403','M1000404','M1000405']
+sec_list = ['M1006947','M1004554','M1000393','M1000394','M1000395','M1000396','M1000398','M1000400','M1000402','M1000403','M1000404','M1000405']
 #关键点利率 0.25,0.5,1,2,3,5,7,10,15,20,30
-index = ['0.25Y','0.5Y','1Y','2Y','3Y','5Y','7Y','10Y','15Y','20Y','30Y']
+index = ['1M','0.25Y','0.5Y','1Y','2Y','3Y','5Y','7Y','10Y','15Y','20Y','30Y']
 begindate = w.tdaysoffset(-21, intraday, "").Data[0][0].strftime("%Y%m%d")
 windout = w.edb(sec_list, begindate, intraday)
 df = pd.DataFrame(windout.Data, columns = windout.Times, index =index)
