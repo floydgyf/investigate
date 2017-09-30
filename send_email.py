@@ -87,13 +87,17 @@ def send_email_outlook(to_list,att_list):
 import socket
 import os
 import time
+import sys
+
+mail_config = sys.argv[1]
+print mail_config
 
 path = os.path.dirname(os.path.realpath(__file__))
 hostname = socket.gethostname()
 if hostname == "SZE7270-1715":
-    xlwb = xlrd.open_workbook(path + u'\\mail_config.xlsx')
+    xlwb = xlrd.open_workbook(path + u'\\' + mail_config)
 else:
-    xlwb = xlrd.open_workbook(path + u'\\mail_config_home.xlsx')
+    xlwb = xlrd.open_workbook(path + u'\\' + mail_config)
 
 to_list = []
 ws = xlwb.sheets()[0]
@@ -113,4 +117,3 @@ for i in range(1,ws.nrows):
     att_list.append(path + ws.cell(i,1).value.encode('utf-8') + ws.cell(i,0).value.encode('utf-8'))
 
 send_email_outlook(to_list,att_list)
- 

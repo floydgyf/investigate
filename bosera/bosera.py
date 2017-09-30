@@ -165,3 +165,77 @@ def industry_chg(df):
     ax1.legend(loc='upper left')
     
     fig.show()
+    
+
+   
+      
+            
+tmp = w.start()
+intraday = time.strftime("%Y%m%d")
+trade_day = w.tdaysoffset(-1, intraday, "").Data[0][0].strftime("%Y%m%d")
+ 
+
+import sqlite3
+conn = sqlite3.connect(':memory:')
+cur = conn.cursor()
+   
+#债券分类（Wind）：一般企业债
+sec_list = w.wset("sectorconstituent","date=" + trade_day + ";sectorid=1000004568000000").Data[1]
+windout = w.wss(sec_list, "windcode,industry_sw,industry_CSRC12,amount,latestissurercreditrating,ptmyear,yield_cnbd","industryType=1;tradeDate=" + trade_day + ";credibility=1").Data
+df = pd.DataFrame(windout, index = ['WindCode','IndustrySW','IndustryCSRC','RatingBond','RatingIssure','PTMYear','YTM']).T
+df.to_sql(name='TMP', con=conn, if_exists='replace', index=False)
+
+#债券分类（Wind）：一般公司债
+sec_list = w.wset("sectorconstituent","date=" + trade_day + ";sectorid=1000009966000000").Data[1]
+windout = w.wss(sec_list, "windcode,industry_sw,industry_CSRC12,amount,latestissurercreditrating,ptmyear,yield_cnbd","industryType=1;tradeDate=" + trade_day + ";credibility=1").Data
+df = pd.DataFrame(windout, index = ['WindCode','IndustrySW','IndustryCSRC','RatingBond','RatingIssure','PTMYear','YTM']).T
+df.to_sql(name='TMP', con=conn, if_exists='append', index=False)
+
+#债券分类（Wind）：一般中期票据
+sec_list = w.wset("sectorconstituent","date=" + trade_day + ";sectorid=1000004570000000").Data[1]
+windout = w.wss(sec_list, "windcode,industry_sw,industry_CSRC12,amount,latestissurercreditrating,ptmyear,yield_cnbd","industryType=1;tradeDate=" + trade_day + ";credibility=1").Data
+df = pd.DataFrame(windout, index = ['WindCode','IndustrySW','IndustryCSRC','RatingBond','RatingIssure','PTMYear','YTM']).T
+df.to_sql(name='TMP', con=conn, if_exists='append', index=False)
+
+#债券分类（Wind）：一般短期融资券
+sec_list = w.wset("sectorconstituent","date=" + trade_day + ";sectorid=1000004566000000").Data[1]
+windout = w.wss(sec_list, "windcode,industry_sw,industry_CSRC12,amount,latestissurercreditrating,ptmyear,yield_cnbd","industryType=1;tradeDate=" + trade_day + ";credibility=1").Data
+df = pd.DataFrame(windout, index = ['WindCode','IndustrySW','IndustryCSRC','RatingBond','RatingIssure','PTMYear','YTM']).T
+df.to_sql(name='TMP', con=conn, if_exists='append', index=False)
+
+cur.execute(
+'''
+    create table Bond_Sample as 
+    select 
+        WindCode, 
+        IndustryCSRC as Industry,
+        case when RatingBond in("AAA","AA+","AA") then RatingBond else "AA-及以下" end as Rating, 
+        case when PTMYear<1 then "1年以内" when 1<=PTMYear and PTMYear<3 then "1-3年" when 3<=PTMYear and PTMYear<7 then "3-7年" else "7年以上" end  as PTM,
+        YTM,
+        PTMYear
+    from TMP
+    where IndustryCSRC is not NULL and YTM is not NULL
+    order by Industry, Rating, PTM
+''')
+cur.execute("select * from Bond_Sample")
+col_name_list = [tuple[0] for tuple in cur.description]
+df = pd.DataFrame(cur.fetchall(), columns = col_name_list)
+
+last=[df['Industry'][0],df['Rating'][0],df['PTM'][0]]
+YTM = []
+data = []
+for i in range(len(df)):
+    if [df['Industry'][i],df['Rating'][i],df['PTM'][i]] <> last or i == len(df)-1:
+        out = [len(YTM),mean(YTM)]
+        for j in range(11):
+            out.append(percentile(YTM,j*10))
+        data.append(last+out)
+        last = [df['Industry'][i],df['Rating'][i],df['PTM'][i]]
+        YTM = [df["YTM"][i]]
+    else:
+        YTM.append(df["YTM"][i])
+df = pd.DataFrame(data)
+df.to_csv('D:\\test.csv', encoding = "utf-8-sig")
+
+cur.close()
+conn.close()

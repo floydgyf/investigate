@@ -19,6 +19,26 @@ def get_market_data(start_date,end_date):
         df.to_csv("D:\\Investigate\\equity\\stock_A\\market_data\\"+date.strftime("%Y%m%d"), encoding='utf-8')
     w.close()
 
+def market2db(start_date,end_date):
+    import sqlite3
+    conn = sqlite3.connect('D:\\Investigate\\data\\investigate.db')
+    cur = conn.cursor()
+    w.start()
+    date_list = w.tdays(start_date, end_date, "").Times
+    for date in date_list:
+        sec_list = w.wset("sectorconstituent","date=" + date.strftime("%Y%m%d") + ";sectorid=a001010100000000").Data[1]
+        var_list = ["pre_close","open","high","low","close","volume","amt","pct_chg","vwap","adjfactor","trade_status"]
+        windout= w.wss(sec_list, var_list,"tradeDate="+ date.strftime("%Y%m%d") +";priceAdj=F;cycle=D")
+        data = windout.Data
+        var = windout.Fields
+        data.insert(0,sec_list)
+        data.insert(0,[date]*len(sec_list))
+        var.insert(0,'SECCODE')
+        var.insert(0,'DATE')
+        df = pd.DataFrame(data, columns = windout.Codes, index = var).T
+        df.to_sql(name='MarketA', con=conn, if_exists='append', index=False)
+    w.close()
+
 
 def get_last_report_date(date):
     datetime = time.strptime(date,"%Y%m%d")
@@ -32,15 +52,49 @@ def get_last_report_date(date):
         return str(datetime.tm_year) + '0930'
     
 def cal_factor_exposure(date):
+    
+    from scipy import stats 
+    
+    ######Step1:检查数据完整性##########
+      
+          
     path = os.path.dirname(os.path.realpath(__file__))
     df = pd.read_csv(path + "\\stock_A\\market_data\\" + date)
     sec_list = df.index
     mrq_date = get_last_report_date(date)
     
-    #BETA
-    start_date = w.tdaysoffset(-252, date, "").Data[0][0].strftime("%Y%m%d")
-    #Momentum
+    #--------BETA---------------
+    begdate = w.tdaysoffset(-252, date, "").Data[0][0].strftime("%Y%m%d")
+    enddate = w.tdaysoffset(-1, date, "").Data[0][0].strftime("%Y%m%d")
+    lambd = (np.ones(252) * 0.5**(1.0/63)) ** range(252)[::-1]
     
+    #样本日收益率
+    sec_return = w.wsd(sec_list, "pct_chg", begdate, enddate, "PriceAdj=F").Data
+   
+    #市场日收益率
+    market_return = w.wsd("000300.SH", "pct_chg", begdate, enddate, "PriceAdj=F").Data[0]
+    xSeries = np.array(market_return) * lambd
+    BETA = []
+    for i in range(len(sec_list)):
+        ySeries = np.array(sec_return[i]) * lambd
+        res = stats.linregress(xSeries,ySeries)
+        BETA.append(res.slope)
+    #---------------Momentum----------------------
+    begdate = w.tdaysoffset(-525, date, "").Data[0][0].strftime("%Y%m%d")
+    enddate = w.tdaysoffset(-22, date, "").Data[0][0].strftime("%Y%m%d")
+    lambd = ((np.ones(525) * 0.5**(1.0/126)) ** range(525))[:20:-1]
+    
+    #样本日收益率
+    sec_return = w.wsd(sec_list, "pct_chg", begdate, enddate, "PriceAdj=F").Data
+   
+    #市场日收益率
+    market_return = w.wsd("000300.SH", "pct_chg", begdate, enddate, "PriceAdj=F").Data[0]
+    xSeries = np.array(market_return) * lambd
+    BETA = []
+    for i in range(len(sec_list)):
+        ySeries = np.array(sec_return[i]) * lambd
+        res = stats.linregress(xSeries,ySeries)
+        BETA.append(res.slope)
     
     
     #SIZE & Non-linear Size
