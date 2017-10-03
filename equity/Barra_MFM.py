@@ -243,4 +243,40 @@ def stdfactor(df):
         df[col] = (np.array(df[col]) - para.loc[col,'avg']) / para.loc[col,'std']
     return para
 
-def
+def cal_factor(df):
+    df_factor = pd.DataFrame(index = df.index, columns = ['Beta','Momentum','Size','Earning','Residual','Growth','BP','Leverage','Liquidity','NLSize'])
+    df_industry = pd.DataFrame(index = df.index, columns = ['Beta','Momentum','Size','Earning','Residual','Growth','BP','Leverage','Liquidity','NLSize'])
+    
+    df_factor['Beta'] = df['BETA']
+    df_factor['Momentum'] = df['RSTR']
+    df_factor['Size'] = df['LNCAP']
+    df_factor['Earning'] = 0.68 * df['EPIBS']+ 0.11 * df['ETOP']+ 0.21 * df['CETOP']
+    df_factor['Residual'] = 0.74 * df['DASTD']+ 0.16 * df['CMRA']+ 0.1 * df['HSIGMA']
+    df_factor['Growth'] = 0.47 * df['SGRO'] + 0.24 * df['EGRO'] + 0.18 * df['EGIBS'] + 0.11 * df['EGIBS_s'] 
+    df_factor['BP'] = df['BTOP']
+    df_factor['Leverage'] = 0.38 * df['MLEV'] + 0.35 * df['DTOA'] + 0.27 * df['BLEV'] 
+    df_factor['Liquidity'] = 0.35 * df['STOM'] + 0.35 * df['STOQ'] + 0.3 * df['STOA'] 
+    df_factor['NLSize'] = df['NLSIZE']
+
+
+def cal_return():
+    from sklearn.linear_model import LinearRegression  
+    
+    linreg = LinearRegression()  
+    model = linreg.fit(x, y)  
+    print model  
+    print linreg.intercept_  
+    print linreg.coef_  
+
+def cal_cov(date):
+    import numpy as np
+    import sqlite3
+    
+    conn = sqlite3.connect('D:\\Investigate\\data\\investigate.db')
+    cur = conn.cursor()
+    #获取收益率序列
+    cur.execute('''
+        select * from FReturn where ? <= date and date <= ? 
+    ''',(begdate,enddate))
+    
+    np.cov()
